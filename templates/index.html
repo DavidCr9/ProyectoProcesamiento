@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detección de Fraudes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 550px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        h1 { color: #2d3748; font-size: 28px; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #718096; text-align: center; margin-bottom: 15px; }
+
+        .example-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-secondary {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e0;
+            background: #edf2f7;
+            color: #2d3748;
+            font-size: 13px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .btn-secondary.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #2d3748;
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        select {
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 13px;
+            background: #f7fafc;
+            transition: .2s;
+        }
+        select:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(102,126,234,.2);
+            outline: none;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg,#667eea,#764ba2);
+            color: white;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: .2s;
+        }
+        button:hover { transform: translateY(-2px); }
+
+        .resultado-container {
+            margin-top: 20px;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .normal {
+            background: #c6f6d5;
+            border: 2px solid #48bb78;
+            color: #22543d;
+        }
+        .fraude {
+            background: #fed7d7;
+            border: 2px solid #fc8181;
+            color: #c53030;
+        }
+
+        .score-container {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .confianza-text {
+            margin-top: 5px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .ejemplo-label {
+            font-size: 13px;
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔐 Detección de Fraudes</h1>
+    <p class="subtitle">Analiza transacciones en tiempo real</p>
+
+    <div class="example-buttons">
+        <a href="/?tipo=normal" class="btn-secondary {% if ejemplo_tipo == 'normal' %}active{% endif %}">
+            Cargar ejemplo NORMAL
+        </a>
+        <a href="/?tipo=fraude" class="btn-secondary {% if ejemplo_tipo == 'fraude' %}active{% endif %}">
+            Cargar ejemplo FRAUDE
+        </a>
+        <a href="/?tipo=manual" class="btn-secondary {% if ejemplo_tipo == 'manual' %}active{% endif %}">
+            Limpiar campos
+        </a>
+    </div>
+
+    <p class="ejemplo-label">
+        Ejemplo actual:
+        {% if ejemplo_tipo == 'normal' %}Transacción NORMAL del dataset{% endif %}
+        {% if ejemplo_tipo == 'fraude' %}Transacción FRAUDE del dataset{% endif %}
+        {% if ejemplo_tipo == 'manual' %}Entrada personalizada (elige de las listas){% endif %}
+    </p>
+
+       <form method="POST" action="/predict">
+        {% for col in feature_names %}
+        <div class="field-group">
+            <label for="{{ col }}">
+                {% if col == "Amount" %}
+                    Amount (Monto)
+                {% elif col == "Time" %}
+                    Time
+                {% else %}
+                    {{ col }}
+                {% endif %}
+            </label>
+
+            <select id="{{ col }}" name="{{ col }}" required>
+                {# 1️⃣ Opción por defecto: valor del ejemplo actual (normal/fraude/manual) #}
+                {% set dv = default_values[col] %}
+                <option value="{{ dv }}">
+                    {{ '%.4f'|format(dv) }} (por defecto)
+                </option>
+
+                {# 2️⃣ Resto de valores del dataset para ese campo #}
+                {% for val in feature_options[col] %}
+                    {% if val != dv %}
+                        <option value="{{ val }}">
+                            {{ '%.4f'|format(val) }}
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        {% endfor %}
+
+        <button type="submit">Evaluar Transacción</button>
+    </form>
+
+    {% if resultado %}
+    <div class="resultado-container {{ 'fraude' if 'FRAUDE' in resultado else 'normal' }}">
+        <p>{{ resultado }}</p>
+    </div>
+    {% endif %}
+
+    {% if score %}
+    <div class="score-container">
+        <strong>Score SVM</strong>
+        <div class="score-value">{{ score }}</div>
+
+        {% if confianza %}
+        <div class="confianza-text">
+            {{ confianza }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if resultado_ae %}
+<div class="resultado-container {{ 'fraude' if 'Anómala' in resultado_ae else 'normal' }}">
+    <p>{{ resultado_ae }}</p>
+</div>
+{% endif %}
+
+{% if mse_ae %}
+<div class="score-container">
+    <strong>Puntuación de Anomalía (MSE)</strong>
+    <div class="score-value">{{ mse_ae }}</div>
+</div>
+
+<div class="threshold-container">
+    <strong>Umbral utilizado (autoencoder):</strong> {{ threshold_ae }}
+</div>
+{% endif %}
+
