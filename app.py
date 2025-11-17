@@ -27,10 +27,11 @@ autoencoder = load_model(AUTOENCODER_PATH, compile=False)
 THRESHOLD_AE = joblib.load("modelos/threshold_ae.pkl")
 
 # Cargar dataset para ejemplos y opciones
-if os.path.exists("creditcard.csv"):
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "creditcard.csv")
+if os.path.exists(CSV_PATH):
     # Se usa la misma porción del dataset con la que se entrenó el modelo
-    df = pd.read_csv("creditcard.csv").iloc[1:50000].copy()
+    df = pd.read_csv(CSV_PATH).iloc[1:50000].copy()
 
     #Variables originales (sin escalar) para ejemplos
     X_full = df.drop("Class", axis=1)
