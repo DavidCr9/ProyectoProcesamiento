@@ -5,6 +5,8 @@ import pandas as pd
 from keras.models import load_model
 import joblib
 import os
+import traceback
+
 
 # Crear la app Flask
 app = Flask(__name__)
@@ -216,6 +218,7 @@ def predict():
 
     except Exception as e:
         print("ERROR en /predict:", e)
+        traceback.print_exc()
         return render_template(
             "index.html",
             # SVM
